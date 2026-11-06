@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 760" font-family="Arial, Helvetica, sans-serif">
+  <title>Wireframe 4 — Vista móvil (lista y modal)</title>
+  <rect width="900" height="760" fill="#f2f2f2"/>
+  <text x="24" y="34" font-size="14" fill="#888">Wireframe 4 · Móvil (390 px): lista y modal tipo "hoja inferior"</text>
+
+  <!-- Teléfono 1: lista -->
+  <rect x="60" y="60" width="300" height="640" rx="28" fill="#fff" stroke="#999" stroke-width="2"/>
+  <g font-size="12" fill="#333">
+    <text x="80" y="104" font-size="18" font-weight="bold">Gestor de tareas</text>
+    <rect x="80" y="118" width="260" height="8" rx="4" fill="#ddd"/><rect x="80" y="118" width="76" height="8" rx="4" fill="#777"/>
+    <rect x="80" y="140" width="260" height="34" rx="8" fill="#555"/><text x="172" y="162" fill="#fff">+ Nueva tarea</text>
+    <rect x="80" y="180" width="126" height="34" rx="8" fill="#fff" stroke="#999"/><text x="112" y="202">↓ Importar</text>
+    <rect x="214" y="180" width="126" height="34" rx="8" fill="#fff" stroke="#999"/><text x="222" y="202">✓✓ Marcar term.</text>
+    <rect x="80" y="220" width="260" height="34" rx="8" fill="#fff" stroke="#999"/><text x="172" y="242">🗑 Vaciar lista</text>
+    <rect x="80" y="264" width="260" height="36" rx="8" fill="#fff" stroke="#999"/><text x="94" y="287" fill="#aaa">🔍 Buscar…</text>
+    <rect x="80" y="308" width="260" height="34" rx="8" fill="#e6e6e6"/>
+    <text x="92" y="330">Todas 7</text><text x="160" y="330">Pendientes 5</text><text x="250" y="330">Complet. 2</text>
+
+    <rect x="80" y="356" width="260" height="84" rx="10" fill="#fff" stroke="#ccc"/>
+    <circle cx="100" cy="378" r="9" fill="none" stroke="#999" stroke-width="2"/>
+    <text x="118" y="382" font-weight="bold">Título que puede ocupar</text><text x="118" y="398" font-weight="bold">dos líneas</text>
+    <text x="118" y="420" font-size="10" fill="#777">Pendiente · 4 nov · TSK-L-000004</text>
+    <text x="316" y="382">✎</text><text x="316" y="412">🗑</text>
+
+    <rect x="80" y="448" width="260" height="84" rx="10" fill="#fff" stroke="#ccc"/>
+    <circle cx="100" cy="470" r="9" fill="#eee" stroke="#bbb" stroke-width="2"/>
+    <text x="118" y="474" font-weight="bold">Tarea importada</text>
+    <text x="118" y="496" font-size="10" fill="#777">Pendiente · 🔒 Importada</text>
+    <text x="118" y="512" font-size="10" fill="#777">4 nov · TSK-A-000012</text>
+    <text x="316" y="474">🗑</text>
+  </g>
+
+  <!-- Teléfono 2: modal -->
+  <rect x="520" y="60" width="300" height="640" rx="28" fill="#9e9e9e" stroke="#999" stroke-width="2"/>
+  <path d="M520 360 h300 v312 a28 28 0 0 1 -28 28 h-244 a28 28 0 0 1 -28 -28 z" fill="#fff"/>
+  <g font-size="12" fill="#333">
+    <text x="540" y="396" font-size="18" font-weight="bold">Nueva tarea</text><text x="794" y="396" font-size="16" fill="#777">✕</text>
+    <text x="540" y="430" font-weight="bold">Título *</text>
+    <rect x="540" y="438" width="260" height="34" rx="8" fill="#fff" stroke="#999"/>
+    <text x="540" y="496" font-weight="bold">Fecha de registro *</text>
+    <rect x="540" y="504" width="260" height="34" rx="8" fill="#fff" stroke="#999"/>
+    <rect x="540" y="552" width="260" height="44" rx="8" fill="#f2f2f2"/><text x="552" y="578">Completada</text>
+    <rect x="762" y="564" width="30" height="18" rx="9" fill="#bbb"/>
+    <rect x="540" y="620" width="126" height="36" rx="8" fill="#fff" stroke="#999"/><text x="578" y="643">Cancelar</text>
+    <rect x="674" y="620" width="126" height="36" rx="8" fill="#555"/><text x="698" y="643" fill="#fff">Guardar tarea</text>
+  </g>
+
+  <g font-size="12" fill="#b00">
+    <text x="60" y="730">① En móvil los botones ocupan el ancho y los modales salen desde abajo, con botones grandes.</text>
+    <text x="60" y="748">② Las acciones de cada tarea se apilan a la derecha para dar más espacio al título.</text>
+  </g>
+</svg>
