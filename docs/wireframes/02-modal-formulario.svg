@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" font-family="Arial, Helvetica, sans-serif">
+  <title>Wireframe 2 — Modal de formulario (crear / editar)</title>
+  <rect width="1200" height="760" fill="#9e9e9e"/>
+  <text x="24" y="34" font-size="14" fill="#f5f5f5">Wireframe 2 · Modal de formulario (crear / editar tarea)</text>
+
+  <rect x="320" y="110" width="560" height="520" rx="16" fill="#fff"/>
+  <text x="352" y="156" font-size="22" font-weight="bold" fill="#333">Nueva tarea</text>
+  <text x="352" y="180" font-size="13" fill="#777">Los campos con * son obligatorios.  (En editar: "ID TSK-L-000004")</text>
+  <text x="842" y="156" font-size="20" fill="#777">✕</text>
+
+  <g font-size="14" fill="#333">
+    <text x="352" y="222" font-weight="bold">Título *</text>
+    <rect x="352" y="232" width="496" height="44" rx="8" fill="#fff" stroke="#999"/>
+    <text x="366" y="259" fill="#aaa">Ej.: Preparar la presentación del proyecto</text>
+    <text x="352" y="296" font-size="12" fill="#777">Describe la tarea en pocas palabras.</text><text x="800" y="296" font-size="12" fill="#777">0/120</text>
+    <text x="352" y="316" font-size="12" fill="#b00">⚠ Mensaje de error (ej.: "Escribe el título de la tarea.")</text>
+
+    <text x="352" y="356" font-weight="bold">Fecha de registro *</text>
+    <rect x="352" y="366" width="496" height="44" rx="8" fill="#fff" stroke="#999"/>
+    <text x="366" y="393">04/11/2026</text><text x="818" y="393">📅</text>
+
+    <rect x="352" y="438" width="496" height="62" rx="8" fill="#f2f2f2" stroke="#ccc"/>
+    <text x="368" y="464" font-weight="bold">Completada</text>
+    <text x="368" y="484" font-size="12" fill="#777">Activa esta opción si la tarea ya está terminada.</text>
+    <rect x="790" y="457" width="44" height="24" rx="12" fill="#bbb"/><circle cx="803" cy="469" r="9" fill="#fff"/>
+  </g>
+
+  <line x1="320" y1="540" x2="880" y2="540" stroke="#ddd"/>
+  <g font-size="14">
+    <rect x="620" y="560" width="100" height="40" rx="8" fill="#fff" stroke="#999"/><text x="640" y="585" fill="#333">Cancelar</text>
+    <rect x="730" y="560" width="118" height="40" rx="8" fill="#555"/><text x="745" y="585" fill="#fff">Guardar tarea</text>
+  </g>
+
+  <g font-size="12" fill="#fff">
+    <text x="320" y="666">① Un solo modal para crear y editar; solo aparece al pulsar "Nueva tarea" o "Editar".</text>
+    <text x="320" y="686">② Datos: título, fecha de registro (por defecto hoy, no futura) y completado (booleano).</text>
+    <text x="320" y="706">③ Se cierra con Cancelar, ✕, tecla Esc o clic fuera. El foco vuelve al botón que lo abrió.</text>
+  </g>
+</svg>
