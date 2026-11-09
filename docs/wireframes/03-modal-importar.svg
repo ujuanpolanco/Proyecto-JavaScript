@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" font-family="Arial, Helvetica, sans-serif">
+  
   <title>Wireframe 3 — Modal para importar tareas</title>
   <rect width="1200" height="800" fill="#9e9e9e"/>
   <text x="24" y="34" font-size="14" fill="#f5f5f5">Wireframe 3 · Modal de importar tareas (API jsonplaceholder)</text>
