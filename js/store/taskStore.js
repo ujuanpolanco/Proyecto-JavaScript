@@ -72,14 +72,15 @@ class TaskStore {
   }
 
   // Crea una tarea nueva
-  add({ title, createdAt, completed = false }) {
-    const { valid, errors } = validateTaskInput({ title, createdAt });
+  add({ title, description = '', createdAt, completed = false }) {
+    const { valid, errors } = validateTaskInput({ title, description, createdAt });
     // Si los datos no son válidos, se detiene y avisa con un error
     if (!valid) throw new ValidationError(errors);
 
     const task = createLocalTask({
       id: localId(this.#state.nextSeq),
       title,
+      description,
       createdAt,
       completed,
     });
@@ -93,6 +94,7 @@ class TaskStore {
   // Edita una tarea existente
   update(id, changes) {
     const task = this.#getEditable(id);
+    // La descripción NO se cambia al editar: solo se escribe al crear la tarea.
     // Une los cambios con los datos actuales (?? deja el valor anterior si no hay cambio)
     const next = {
       title: changes.title ?? task.title,
