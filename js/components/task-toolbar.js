@@ -1,15 +1,17 @@
 /**
- * <task-toolbar>: botones de acción, buscador y filtro por estado.
+ * <task-toolbar>: botones de acción, buscador, filtro por estado y filtro por categoría.
  * Responsable: Juan
  *
- * Emite: CREATE_REQUEST, IMPORT_REQUEST, COMPLETE_ALL_REQUEST, CLEAR_REQUEST, FILTER_CHANGE
- * Uso: toolbar.updateStats({ total, pending, completed }), toolbar.reset(),
+ * Emite: CREATE_REQUEST, IMPORT_REQUEST, CATEGORIES_REQUEST, COMPLETE_ALL_REQUEST,
+ *        CLEAR_REQUEST, FILTER_CHANGE { status, query, category }
+ * Uso: toolbar.updateStats({ total, pending, completed }), toolbar.setCategories(categorias), toolbar.reset(),
  *      toolbar.focusSearch(), toolbar.focusCreate()
  */
 import { baseCss } from './shared-styles.js';
 import { icons } from './icons.js';
 import { EVENTS, emit } from '../utils/events.js';
-import { STATUS } from '../utils/filter.js';
+import { CATEGORY_FILTER, STATUS } from '../utils/filter.js';
+import { escapeHTML } from '../utils/dom.js';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -34,6 +36,12 @@ template.innerHTML = `
       background: var(--color-surface); color: inherit; font: inherit;
     }
     .search input::placeholder { color: var(--color-text-muted); }
+
+    /* Filtro por categoría */
+    .category-filter select {
+      min-height: 2.75rem; max-width: 100%; padding: .5rem .75rem; font: inherit; color: inherit;
+      background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+    }
 
     fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
     .filters {
@@ -61,6 +69,7 @@ template.innerHTML = `
       .actions .btn--primary, .actions .btn--danger { grid-column: 1 / -1; }
       .actions .spacer { display: none; }
       .filters { display: flex; width: 100%; }
+      .category-filter, .category-filter select { width: 100%; }
       .filters label { flex: 1; }
       .chip { width: 100%; padding-inline: .375rem; }
     }
@@ -76,6 +85,7 @@ template.innerHTML = `
     <div class="actions">
       <button class="btn btn--primary" type="button" id="btn-create">${icons.plus}Nueva tarea</button>
       <button class="btn" type="button" id="btn-import">${icons.download}Importar</button>
+      <button class="btn" type="button" id="btn-categories">${icons.tag}Categorías</button>
       <span class="spacer"></span>
       <button class="btn" type="button" id="btn-complete"
         title="Marca como terminadas las tareas pendientes que estás viendo">${icons.checkAll}Marcar terminadas</button>
@@ -87,6 +97,14 @@ template.innerHTML = `
         ${icons.search}
         <label class="sr-only" for="search">Buscar tareas</label>
         <input id="search" type="search" placeholder="Buscar por título o ID..." autocomplete="off">
+      </div>
+
+      <div class="category-filter">
+        <label class="sr-only" for="category">Filtrar por categoría</label>
+        <select id="category">
+          <option value="${CATEGORY_FILTER.ALL}">Todas las categorías</option>
+          <option value="${CATEGORY_FILTER.NONE}">Sin categoría</option>
+        </select>
       </div>
 
       <fieldset class="filters">
@@ -111,6 +129,8 @@ class TaskToolbar extends HTMLElement {
     const root = this.shadowRoot;
     root.getElementById('btn-create').addEventListener('click', () => emit(this, EVENTS.CREATE_REQUEST));
     root.getElementById('btn-import').addEventListener('click', () => emit(this, EVENTS.IMPORT_REQUEST));
+    root.getElementById('btn-categories').addEventListener('click', () => emit(this, EVENTS.CATEGORIES_REQUEST));
+    root.getElementById('category').addEventListener('change', () => this.#emitFilters());
     root.getElementById('btn-complete').addEventListener('click', () => emit(this, EVENTS.COMPLETE_ALL_REQUEST));
     root.getElementById('btn-clear').addEventListener('click', () => emit(this, EVENTS.CLEAR_REQUEST));
 
@@ -137,9 +157,30 @@ class TaskToolbar extends HTMLElement {
     root.getElementById('btn-complete').disabled = pending === 0;
   }
 
-  /** Limpia la búsqueda y vuelve al filtro "Todas". */
+  /**
+   * Vuelve a llenar el filtro de categorías. Si la categoría filtrada se eliminó,
+   * el filtro vuelve a "Todas las categorías" y avisa del cambio.
+   */
+  setCategories(categories) {
+    const select = this.shadowRoot.getElementById('category');
+    const current = select.value;
+    const options = categories.map(
+      (category) => `<option value="${escapeHTML(category.id)}">${escapeHTML(category.name)}</option>`
+    );
+    select.innerHTML = `
+      <option value="${CATEGORY_FILTER.ALL}">Todas las categorías</option>
+      <option value="${CATEGORY_FILTER.NONE}">Sin categoría</option>
+      ${options.join('')}`;
+    const stillExists = current === CATEGORY_FILTER.ALL || current === CATEGORY_FILTER.NONE
+      || categories.some((category) => category.id === current);
+    select.value = stillExists ? current : CATEGORY_FILTER.ALL;
+    if (!stillExists) this.#emitFilters();
+  }
+
+  /** Limpia la búsqueda y vuelve a los filtros "Todas". */
   reset() {
     this.shadowRoot.getElementById('search').value = '';
+    this.shadowRoot.getElementById('category').value = CATEGORY_FILTER.ALL;
     this.shadowRoot.querySelector(`input[value="${STATUS.ALL}"]`).checked = true;
     this.#emitFilters();
   }
@@ -157,6 +198,7 @@ class TaskToolbar extends HTMLElement {
     emit(this, EVENTS.FILTER_CHANGE, {
       status: root.querySelector('input[name="status"]:checked').value,
       query: root.getElementById('search').value,
+      category: root.getElementById('category').value,
     });
   }
 }

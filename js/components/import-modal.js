@@ -2,8 +2,9 @@
  * <import-modal>: selecciona tareas del banco público (jsonplaceholder) para importarlas.
  * Responsable: Marlon
  *
- * Uso: importer.open(idsYaImportados), importer.close()
- * Emite: IMPORT { todos: [{ id, title, completed, userId }] }
+ * Uso: importer.open(idsYaImportados, categorias), importer.close()
+ * Emite: IMPORT { todos: [{ id, title, completed, userId }], categoryId }
+ *   - categoryId: categoría elegida para TODAS las tareas importadas (null = sin categoría)
  *
  * Estados: cargando → listo | error (con botón "Reintentar").
  * Las tareas ya importadas aparecen marcadas y deshabilitadas.
@@ -11,7 +12,7 @@
 import { baseCss, dialogCss } from './shared-styles.js';
 import { icons } from './icons.js';
 import { EVENTS, emit } from '../utils/events.js';
-import { closeOnBackdrop, escapeHTML } from '../utils/dom.js';
+import { closeOnBackdrop, escapeHTML, fillCategorySelect } from '../utils/dom.js';
 import { STATUS, matchesStatus, normalize } from '../utils/filter.js';
 import { fetchTodos } from '../services/api.js';
 
@@ -45,6 +46,14 @@ template.innerHTML = `
       background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
     }
     .controls input { flex: 1 1 220px; }
+
+    /* Selector de la categoría de destino */
+    .target { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+    .target label { font-size: .875rem; font-weight: 600; }
+    .target select {
+      flex: 1 1 200px; min-height: 2.5rem; padding: .375rem .75rem; font: inherit; color: inherit;
+      background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+    }
 
     /* Caja con la lista del banco */
     .box { display: flex; flex-direction: column; min-height: 0; flex: 1; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
@@ -105,6 +114,11 @@ template.innerHTML = `
 
       <!-- Estado LISTO: buscador, filtro y lista -->
       <div class="ready" id="state-ready" hidden>
+        <!-- Categoría a la que pertenecerán las tareas importadas -->
+        <div class="target">
+          <label for="import-category">Importar en la categoría</label>
+          <select id="import-category"></select>
+        </div>
         <div class="controls">
           <label class="sr-only" for="bank-search">Buscar en el banco</label>
           <input id="bank-search" type="search" placeholder="Buscar en el banco..." autocomplete="off">
@@ -167,10 +181,14 @@ class ImportModal extends HTMLElement {
     });
   }
 
-  /** importedIds: Set con los ids originales de la API que ya están en la lista. */
-  open(importedIds) {
+  /**
+   * importedIds: Set con los ids originales de la API que ya están en la lista.
+   * categories: categorías para elegir a cuál pertenecerán las tareas importadas.
+   */
+  open(importedIds, categories = []) {
     const root = this.shadowRoot;
     this.#imported = importedIds;
+    fillCategorySelect(root.getElementById('import-category'), categories);
     this.#selected.clear();
     root.getElementById('bank-search').value = '';
     root.getElementById('bank-status').value = STATUS.ALL;
@@ -309,7 +327,8 @@ class ImportModal extends HTMLElement {
   // Envía a task-app las tareas elegidas
   #import() {
     const todos = this.#todos.filter((todo) => this.#selected.has(todo.id));
-    if (todos.length > 0) emit(this, EVENTS.IMPORT, { todos });
+    const categoryId = this.shadowRoot.getElementById('import-category').value || null;
+    if (todos.length > 0) emit(this, EVENTS.IMPORT, { todos, categoryId });
   }
 }
 

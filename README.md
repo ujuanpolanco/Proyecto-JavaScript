@@ -57,9 +57,10 @@ Si todavía no tienes tareas, verás el mensaje **"Aún no tienes tareas"** con 
 ### Crear una tarea
 1. Pulsa **Nueva tarea**.
 2. Escribe el **título** (entre 3 y 120 caracteres).
-3. Revisa la **fecha de registro**. Por defecto es hoy y no puede ser una fecha futura.
-4. Si la tarea ya está hecha, activa **Completada**.
-5. Pulsa **Guardar tarea**. La tarea aparece al inicio de la lista.
+3. Elige la **categoría** (opcional). Si no eliges ninguna, queda como **Sin categoría**.
+4. Revisa la **fecha de registro**. Por defecto es hoy y no puede ser una fecha futura.
+5. Si la tarea ya está hecha, activa **Completada**.
+6. Pulsa **Guardar tarea**. La tarea aparece al inicio de la lista.
 
 Si falta un dato o no es válido, el formulario te dice qué corregir debajo del campo.
 
@@ -82,15 +83,25 @@ Si falta un dato o no es válido, el formulario te dice qué corregir debajo del
 ### Importar tareas del banco
 1. Pulsa **Importar**. Se abre una ventana con el banco de tareas (200 tareas de la API pública jsonplaceholder).
 2. Si quieres, busca por título o filtra por estado dentro de la ventana.
-3. Marca una o varias tareas, o usa **Seleccionar visibles** para marcar todas las que ves.
-4. Pulsa **Importar (n)**, donde *n* es el número de tareas elegidas.
+3. En **Importar en la categoría**, elige la categoría a la que pertenecerán las tareas importadas (o deja **Sin categoría**).
+4. Marca una o varias tareas, o usa **Seleccionar visibles** para marcar todas las que ves.
+5. Pulsa **Importar (n)**, donde *n* es el número de tareas elegidas.
 
 Las tareas que ya importaste aparecen como **"Ya importada"** y no se pueden volver a elegir.
+
+### Gestionar categorías
+Pulsa **Categorías** para abrir el gestor:
+- **Crear:** escribe el nombre (entre 2 y 30 caracteres) y pulsa **Agregar**. No se pueden repetir nombres ("Hogar" y "hogar" cuentan como el mismo).
+- **Renombrar:** pulsa el lápiz de la categoría, cambia el nombre y pulsa **Guardar**. Todas sus tareas muestran el nombre nuevo.
+- **Eliminar:** pulsa la papelera y confirma. Las tareas de esa categoría **no se borran**: quedan como **Sin categoría**.
+
+Cada categoría muestra cuántas tareas tiene. La categoría de una tarea aparece como una etiqueta morada debajo del título, y en las tareas creadas por ti se puede cambiar con **Editar**.
 
 ### Buscar y filtrar
 - **Buscar por título:** escribe en el buscador. No importan las tildes ni las mayúsculas: "reunion" encuentra "Reunión".
 - **Buscar por ID:** escribe el código empezando por `tsk`, por ejemplo `tsk-l-000003`.
 - **Filtrar por estado:** elige **Todas**, **Pendientes** o **Completadas**. Cada opción muestra cuántas tareas tiene.
+- **Filtrar por categoría:** elige una categoría, **Sin categoría** o **Todas las categorías**. Se combina con el filtro de estado y la búsqueda.
 - **Borrar la búsqueda:** pulsa `Esc` dentro del buscador.
 
 Si ninguna tarea coincide, verás **"Sin resultados"** con un botón para **Limpiar filtros**.

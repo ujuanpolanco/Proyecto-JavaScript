@@ -4,21 +4,24 @@
  *
  * Los componentes leen con getAll() y piden cambios con add(), update(),
  * toggle(), remove(), importTodos(), markCompleted() y clear().
+ * Categorías: getCategories(), addCategory(), updateCategory(), removeCategory()
+ * y countByCategory().
  * Cada cambio se guarda en localStorage. Después de cada acción, <task-app>
  * vuelve a pintar la lista.
  */
 // Funciones del modelo, de los IDs y del guardado que usa el store
 import { createApiTask, createLocalTask, isReadOnly, SOURCE, validateTaskInput } from '../models/task.js';
-import { apiId, localId } from '../utils/id.js';
+import { createCategory, validateCategoryInput } from '../models/category.js';
+import { apiId, categoryId as buildCategoryId, localId } from '../utils/id.js';
 import { loadState, saveState } from '../services/storage.js';
 
 // Errores propios: así <task-app> sabe qué tipo de error ocurrió.
 // Error cuando los datos del formulario no son válidos
 export class ValidationError extends Error {
   constructor(errors) {
-    super('Datos de la tarea no válidos.');
+    super('Los datos no son válidos.');
     this.name = 'ValidationError';
-    this.errors = errors; // { title?: '...', createdAt?: '...' }
+    this.errors = errors; // { title?, createdAt?, description?, categoryId?, name? }
   }
 }
 
@@ -38,6 +41,14 @@ export class TaskNotFoundError extends Error {
   }
 }
 
+// Error cuando no existe una categoría con ese ID
+export class CategoryNotFoundError extends Error {
+  constructor(id) {
+    super(`No se encontró la categoría ${id}.`);
+    this.name = 'CategoryNotFoundError';
+  }
+}
+
 // Error cuando el navegador no deja guardar
 export class StorageError extends Error {
   constructor() {
@@ -49,7 +60,7 @@ export class StorageError extends Error {
 // Clase que maneja todas las tareas de la aplicación
 class TaskStore {
   // # = campo privado: solo se puede usar dentro de esta clase.
-  #state = loadState(); // { version, nextSeq, tasks }
+  #state = loadState(); // { version, nextSeq, nextCategorySeq, tasks, categories }
 
   // Devuelve todas las tareas
   getAll() {
@@ -72,10 +83,11 @@ class TaskStore {
   }
 
   // Crea una tarea nueva
-  add({ title, description = '', createdAt, completed = false }) {
+  add({ title, description = '', createdAt, completed = false, categoryId = null }) {
     const { valid, errors } = validateTaskInput({ title, description, createdAt });
     // Si los datos no son válidos, se detiene y avisa con un error
     if (!valid) throw new ValidationError(errors);
+    this.#assertCategory(categoryId);
 
     const task = createLocalTask({
       id: localId(this.#state.nextSeq),
@@ -83,6 +95,7 @@ class TaskStore {
       description,
       createdAt,
       completed,
+      categoryId,
     });
     // Suma 1 al consecutivo para la próxima tarea
     this.#state.nextSeq += 1;
@@ -103,10 +116,14 @@ class TaskStore {
     };
     const { valid, errors } = validateTaskInput(next);
     if (!valid) throw new ValidationError(errors);
+    // undefined = no se cambió la categoría; null = "Sin categoría"
+    const nextCategoryId = changes.categoryId === undefined ? task.categoryId : changes.categoryId || null;
+    this.#assertCategory(nextCategoryId);
 
     task.title = String(next.title).trim();
     task.createdAt = next.createdAt;
     task.completed = Boolean(next.completed);
+    task.categoryId = nextCategoryId;
     this.#save();
     return { ...task };
   }
@@ -129,9 +146,11 @@ class TaskStore {
 
   /**
    * Importa tareas de la API, omitiendo las que ya existen.
+   * categoryId: categoría a la que pertenecerán las tareas importadas (o null).
    * Devuelve { added, skipped }: cuántas se agregaron y cuántas ya estaban.
    */
-  importTodos(todos) {
+  importTodos(todos, categoryId = null) {
+    this.#assertCategory(categoryId);
     // IDs que ya están en la lista, para no repetir
     const existing = new Set(this.#state.tasks.map((task) => task.id));
     const newTasks = [];
@@ -142,7 +161,7 @@ class TaskStore {
       if (existing.has(apiId(todo.id))) {
         skipped += 1;
       } else {
-        const task = createApiTask(todo);
+        const task = createApiTask(todo, categoryId);
         existing.add(task.id);
         newTasks.push(task);
       }
@@ -178,6 +197,93 @@ class TaskStore {
     this.#state.tasks = [];
     this.#save();
   }
+
+  // ----- Categorías -----
+
+  // Devuelve todas las categorías, ordenadas por nombre
+  getCategories() {
+    return this.#state.categories
+      .map((category) => ({ ...category }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  }
+
+  // Devuelve una categoría por su ID, o null si no existe
+  getCategoryById(id) {
+    const category = this.#findCategory(id);
+    return category ? { ...category } : null;
+  }
+
+  /** Cuántas tareas tiene cada categoría: Map { categoryId → cantidad }. */
+  countByCategory() {
+    const counts = new Map();
+    for (const task of this.#state.tasks) {
+      if (task.categoryId) counts.set(task.categoryId, (counts.get(task.categoryId) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  // Crea una categoría nueva
+  addCategory({ name }) {
+    this.#validateCategory(name);
+    const category = createCategory({ id: buildCategoryId(this.#state.nextCategorySeq), name });
+    this.#state.nextCategorySeq += 1;
+    this.#state.categories.push(category);
+    this.#save();
+    return { ...category };
+  }
+
+  // Cambia el nombre de una categoría
+  updateCategory(id, { name }) {
+    const category = this.#findCategory(id);
+    if (!category) throw new CategoryNotFoundError(id);
+    this.#validateCategory(name, id);
+    category.name = String(name).trim();
+    this.#save();
+    return { ...category };
+  }
+
+  /**
+   * Elimina una categoría. Sus tareas NO se borran: quedan "Sin categoría".
+   * Devuelve cuántas tareas quedaron sin categoría.
+   */
+  removeCategory(id) {
+    const index = this.#state.categories.findIndex((category) => category.id === id);
+    if (index === -1) throw new CategoryNotFoundError(id);
+    this.#state.categories.splice(index, 1);
+
+    let released = 0;
+    for (const task of this.#state.tasks) {
+      if (task.categoryId === id) {
+        task.categoryId = null;
+        released += 1;
+      }
+    }
+    this.#save();
+    return released;
+  }
+
+  // Valida el nombre comparándolo con las demás categorías (exceptId = la que se está editando)
+  #validateCategory(name, exceptId = null) {
+    const otherNames = this.#state.categories
+      .filter((category) => category.id !== exceptId)
+      .map((category) => category.name);
+    const { valid, errors } = validateCategoryInput({ name }, otherNames);
+    if (!valid) throw new ValidationError(errors);
+  }
+
+  // Busca la categoría original (no una copia)
+  #findCategory(id) {
+    return this.#state.categories.find((category) => category.id === id);
+  }
+
+  // Una tarea solo puede apuntar a una categoría que exista (null = sin categoría)
+  #assertCategory(categoryId) {
+    if (categoryId && !this.#findCategory(categoryId)) {
+      throw new ValidationError({ categoryId: 'La categoría seleccionada ya no existe.' });
+    }
+  }
+
+  // ----- Ayudantes internos -----
 
   // Busca la tarea original (no una copia)
   #find(id) {

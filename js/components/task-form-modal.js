@@ -2,8 +2,10 @@
  * <task-form-modal>: formulario para crear o editar una tarea.
  * Responsable: Juan
  *
- * Uso: form.open() para crear, form.open(tarea) para editar, form.close(), form.showErrors(errores)
- * Emite: SAVE { id, data: { title, description, createdAt, completed } }
+ * Uso: form.open(null, categorias) para crear, form.open(tarea, categorias) para editar,
+ *      form.close(), form.showErrors(errores)
+ * Emite: SAVE { id, data: { title, description, createdAt, completed, categoryId } }
+ *   - categoryId es null si se eligió "Sin categoría"
  *   - La descripción solo se puede escribir al crear; al editar se muestra bloqueada.
  *   - id null → crear tarea
  *   - con id  → editar tarea
@@ -11,7 +13,7 @@
 import { baseCss, dialogCss } from './shared-styles.js';
 import { icons } from './icons.js';
 import { EVENTS, emit } from '../utils/events.js';
-import { closeOnBackdrop } from '../utils/dom.js';
+import { closeOnBackdrop, fillCategorySelect } from '../utils/dom.js';
 import { DESCRIPTION_MAX, TITLE_MAX, todayISO, validateTaskInput } from '../models/task.js';
 
 const template = document.createElement('template');
@@ -26,7 +28,7 @@ template.innerHTML = `
     /* Asterisco rojo de campo obligatorio */
     .req { color: var(--color-danger); }
     /* Cajas de texto, de fecha y de descripción */
-    input[type="text"], input[type="date"], textarea {
+    input[type="text"], input[type="date"], textarea, select {
       width: 100%; min-height: 2.75rem; padding: .5rem .75rem;
       border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
       background: var(--color-surface); color: inherit; font: inherit;
@@ -36,7 +38,7 @@ template.innerHTML = `
     /* Descripción bloqueada (al editar): fondo gris y sin cursor de escritura */
     textarea[readonly] { background: var(--color-surface-muted); color: var(--color-text-muted); cursor: not-allowed; }
     /* Si el campo tiene error, el borde se pone rojo */
-    input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--color-danger); }
+    input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--color-danger); }
     /* Ayuda debajo del título y contador de caracteres */
     .hint { display: flex; justify-content: space-between; gap: 1rem; font-size: .8125rem; color: var(--color-text-muted); }
     /* Mensaje de error en rojo debajo del campo; se oculta si está vacío */
@@ -103,6 +105,14 @@ template.innerHTML = `
         </div>
 
         <div class="field">
+          <!-- Campo CATEGORÍA (opcional) -->
+          <label for="categoryId">Categoría</label>
+          <select id="categoryId" aria-describedby="categoryId-hint categoryId-error"></select>
+          <span class="hint" id="categoryId-hint">Las categorías se crean con el botón "Categorías".</span>
+          <p class="error" id="categoryId-error" role="alert"></p>
+        </div>
+
+        <div class="field">
           <!-- Campo FECHA DE REGISTRO -->
           <label for="createdAt">Fecha de registro <span class="req">*</span></label>
           <input id="createdAt" type="date" aria-describedby="createdAt-error">
@@ -151,6 +161,7 @@ class TaskFormModal extends HTMLElement {
       this.#setError('title', '');
     });
     root.getElementById('createdAt').addEventListener('input', () => this.#setError('createdAt', ''));
+    root.getElementById('categoryId').addEventListener('change', () => this.#setError('categoryId', ''));
     // Al escribir la descripción se actualiza su contador y se borra su error
     root.getElementById('description').addEventListener('input', () => {
       this.#updateCounter();
@@ -158,8 +169,11 @@ class TaskFormModal extends HTMLElement {
     });
   }
 
-  /** Sin tarea abre el modo "crear"; con tarea, el modo "editar". */
-  open(task = null) {
+  /**
+   * Sin tarea abre el modo "crear"; con tarea, el modo "editar".
+   * categories: lista de categorías para el selector.
+   */
+  open(task = null, categories = []) {
     const root = this.shadowRoot;
     const isEdit = task !== null;
     this.#editingId = isEdit ? task.id : null;
@@ -183,7 +197,9 @@ class TaskFormModal extends HTMLElement {
     root.getElementById('createdAt').value = isEdit ? task.createdAt : todayISO();
     root.getElementById('createdAt').max = todayISO(); // el calendario no deja elegir fechas futuras
     root.getElementById('completed').checked = isEdit ? task.completed : false;
+    fillCategorySelect(root.getElementById('categoryId'), categories, isEdit ? task.categoryId : null);
     this.#setError('title', '');
+    this.#setError('categoryId', '');
     this.#setError('createdAt', '');
     this.#setError('description', '');
     this.#updateCounter();
@@ -203,8 +219,10 @@ class TaskFormModal extends HTMLElement {
     this.#setError('title', errors.title ?? '');
     this.#setError('createdAt', errors.createdAt ?? '');
     this.#setError('description', errors.description ?? '');
+    this.#setError('categoryId', errors.categoryId ?? '');
     if (errors.title) this.shadowRoot.getElementById('title').focus();
     else if (errors.description) this.shadowRoot.getElementById('description').focus();
+    else if (errors.categoryId) this.shadowRoot.getElementById('categoryId').focus();
     else if (errors.createdAt) this.shadowRoot.getElementById('createdAt').focus();
   }
 
@@ -216,6 +234,8 @@ class TaskFormModal extends HTMLElement {
       description: root.getElementById('description').value.trim(),
       createdAt: root.getElementById('createdAt').value,
       completed: root.getElementById('completed').checked,
+      // "" (Sin categoría) se guarda como null
+      categoryId: root.getElementById('categoryId').value || null,
     };
     const { valid, errors } = validateTaskInput(data);
     if (!valid) {
@@ -225,7 +245,7 @@ class TaskFormModal extends HTMLElement {
     emit(this, EVENTS.SAVE, { id: this.#editingId, data });
   }
 
-  /** field es 'title', 'description' o 'createdAt'. Con mensaje vacío se borra el error. */
+  /** field es 'title', 'description', 'categoryId' o 'createdAt'. Con mensaje vacío se borra el error. */
   #setError(field, message) {
     const root = this.shadowRoot;
     const error = root.getElementById(`${field}-error`);

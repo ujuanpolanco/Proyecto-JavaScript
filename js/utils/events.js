@@ -12,11 +12,14 @@ export const EVENTS = Object.freeze({
   TOGGLE: 'task:toggle', //                  { id }        cambiar completada/pendiente
   DELETE: 'task:delete', //                  { id }        eliminar una tarea
   IMPORT_REQUEST: 'task:import-request', //  {}            abrir modal de importar
-  IMPORT: 'task:import', //                  { todos }     importar las seleccionadas
+  IMPORT: 'task:import', //                  { todos, categoryId } importar las seleccionadas en una categoría
   COMPLETE_ALL_REQUEST: 'task:complete-all-request', // {} marcar visibles como terminadas
   CLEAR_REQUEST: 'task:clear-request', //    {}            vaciar la lista
-  FILTER_CHANGE: 'filter:change', //         { status, query }
+  FILTER_CHANGE: 'filter:change', //         { status, query, category }
   FILTER_RESET_REQUEST: 'filter:reset-request', // {}      limpiar búsqueda y filtro
+  CATEGORIES_REQUEST: 'category:manage-request', // {}     abrir el gestor de categorías
+  CATEGORY_SAVE: 'category:save', //         { id?, name }  crear (sin id) o renombrar (con id)
+  CATEGORY_DELETE: 'category:delete', //     { id }        eliminar una categoría
 });
 
 export function emit(element, name, detail = {}) {

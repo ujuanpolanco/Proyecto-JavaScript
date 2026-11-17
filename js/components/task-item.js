@@ -2,7 +2,7 @@
  * <task-item>: una tarea de la lista.
  * Responsable: Juan
  *
- * Uso: item.setTask(tarea)
+ * Uso: item.setTask(tarea)  (tarea.categoryName: nombre de su categoría, si tiene)
  * Emite: TOGGLE, EDIT, DELETE (con { id })
  *
  * Las tareas importadas (source "api") no se pueden editar ni cambiar de estado:
@@ -78,6 +78,7 @@ template.innerHTML = `
     .badge--pending { background: var(--color-warning-soft); color: var(--color-warning); }
     .badge--done { background: var(--color-success-soft); color: var(--color-success); }
     .badge--api { background: var(--color-info-soft); color: var(--color-info); }
+    .badge--category { background: var(--color-primary-soft); color: var(--color-primary); max-width: 100%; overflow-wrap: anywhere; }
 
     /* BOTONES editar y eliminar */
     .actions { display: flex; gap: .25rem; }
@@ -105,6 +106,7 @@ template.innerHTML = `
       <p class="meta">
         <span class="badge status"></span>
         <span class="badge badge--api imported" hidden>${icons.lock}Importada</span>
+        <span class="badge badge--category category" title="Categoría" hidden>${icons.tag}<span class="category-name"></span></span>
         <span class="date" title="Fecha de registro">${icons.calendar}<span class="date-text"></span></span>
         <span class="id"></span>
       </p>
@@ -160,6 +162,9 @@ class TaskItem extends HTMLElement {
     status.textContent = task.completed ? 'Completada' : 'Pendiente';
     status.className = `badge status ${task.completed ? 'badge--done' : 'badge--pending'}`;
     root.querySelector('.imported').hidden = !readOnly;
+    // Etiqueta de la categoría (se oculta si la tarea no tiene)
+    root.querySelector('.category').hidden = !task.categoryName;
+    root.querySelector('.category-name').textContent = task.categoryName ?? '';
 
     // Círculo: marcado si está completada y deshabilitado si es importada
     const check = root.querySelector('.check');

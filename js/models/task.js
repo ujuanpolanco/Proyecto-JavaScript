@@ -10,6 +10,7 @@
  *   "createdAt": "2026-11-04",      // fecha de registro (YYYY-MM-DD)
  *   "completed": false,
  *   "source": "local",              // "local" | "api"
+ *   "categoryId": "CAT-000001",     // categoría de la tarea, o null si no tiene
  *   "externalId": 12                // solo en tareas importadas
  * }
  */
@@ -93,7 +94,7 @@ export function validateTaskInput({ title, createdAt, description } = {}) {
 }
 
 // Crea el objeto de una tarea hecha por el usuario
-export function createLocalTask({ id, title, description, createdAt, completed }) {
+export function createLocalTask({ id, title, description, createdAt, completed, categoryId = null }) {
   return {
     id,
     title: String(title).trim(),
@@ -104,11 +105,15 @@ export function createLocalTask({ id, title, description, createdAt, completed }
     // Boolean() asegura que el valor sea true o false
     completed: Boolean(completed),
     source: SOURCE.LOCAL,
+    categoryId: categoryId || null,
   };
 }
 
-/** Convierte una tarea de jsonplaceholder al formato propio. */
-export function createApiTask(todo) {
+/**
+ * Convierte una tarea de jsonplaceholder al formato propio.
+ * categoryId: categoría elegida en el formulario de importación (o null).
+ */
+export function createApiTask(todo, categoryId = null) {
   return {
     id: apiId(todo.id),
     title: String(todo.title).trim(),
@@ -116,6 +121,7 @@ export function createApiTask(todo) {
     completed: Boolean(todo.completed),
     source: SOURCE.API,
     externalId: todo.id,
+    categoryId: categoryId || null,
   };
 }
 
@@ -132,6 +138,8 @@ export function isValidStoredTask(task) {
       typeof task.title === 'string' &&
       // La descripción es opcional (las tareas viejas e importadas no la tienen)
       (task.description === undefined || typeof task.description === 'string') &&
+      // La categoría es opcional (las tareas guardadas antes de las categorías no la tienen)
+      (task.categoryId === undefined || task.categoryId === null || typeof task.categoryId === 'string') &&
       typeof task.createdAt === 'string' &&
       typeof task.completed === 'boolean' &&
       (task.source === SOURCE.LOCAL || task.source === SOURCE.API)

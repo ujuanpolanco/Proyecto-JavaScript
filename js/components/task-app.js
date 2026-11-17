@@ -10,11 +10,12 @@ import './task-toolbar.js';
 import './task-list.js';
 import './task-form-modal.js';
 import './import-modal.js';
+import './category-manager.js';
 import './confirm-dialog.js';
 import './toast-message.js';
 
 import { EVENTS } from '../utils/events.js';
-import { countStats, filterTasks, STATUS } from '../utils/filter.js';
+import { CATEGORY_FILTER, countStats, filterTasks, STATUS } from '../utils/filter.js';
 import { plural } from '../utils/format.js';
 import { isReadOnly } from '../models/task.js';
 import { taskStore, ValidationError } from '../store/taskStore.js';
@@ -73,12 +74,13 @@ template.innerHTML = `
 
   <task-form-modal></task-form-modal>
   <import-modal></import-modal>
+  <category-manager></category-manager>
   <confirm-dialog></confirm-dialog>
   <toast-message></toast-message>
 `;
 
 class TaskApp extends HTMLElement {
-  #filters = { status: STATUS.ALL, query: '' };
+  #filters = { status: STATUS.ALL, query: '', category: CATEGORY_FILTER.ALL };
 
   constructor() {
     super();
@@ -91,6 +93,7 @@ class TaskApp extends HTMLElement {
     this.list = root.querySelector('task-list');
     this.form = root.querySelector('task-form-modal');
     this.importer = root.querySelector('import-modal');
+    this.categories = root.querySelector('category-manager');
     this.confirm = root.querySelector('confirm-dialog');
     this.toast = root.querySelector('toast-message');
 
@@ -107,13 +110,20 @@ class TaskApp extends HTMLElement {
    */
   #listen() {
     const root = this.shadowRoot;
-    root.addEventListener(EVENTS.CREATE_REQUEST, () => this.form.open());
+    root.addEventListener(EVENTS.CREATE_REQUEST, () => this.form.open(null, taskStore.getCategories()));
     root.addEventListener(EVENTS.EDIT, (e) => this.#edit(e.detail.id));
     root.addEventListener(EVENTS.SAVE, (e) => this.#save(e.detail));
     root.addEventListener(EVENTS.TOGGLE, (e) => this.#toggle(e.detail.id));
     root.addEventListener(EVENTS.DELETE, (e) => this.#delete(e.detail.id));
-    root.addEventListener(EVENTS.IMPORT_REQUEST, () => this.importer.open(taskStore.importedExternalIds()));
-    root.addEventListener(EVENTS.IMPORT, (e) => this.#import(e.detail.todos));
+    root.addEventListener(EVENTS.IMPORT_REQUEST, () =>
+      this.importer.open(taskStore.importedExternalIds(), taskStore.getCategories())
+    );
+    root.addEventListener(EVENTS.IMPORT, (e) => this.#import(e.detail));
+    root.addEventListener(EVENTS.CATEGORIES_REQUEST, () =>
+      this.categories.open(taskStore.getCategories(), taskStore.countByCategory())
+    );
+    root.addEventListener(EVENTS.CATEGORY_SAVE, (e) => this.#saveCategory(e.detail));
+    root.addEventListener(EVENTS.CATEGORY_DELETE, (e) => this.#deleteCategory(e.detail.id));
     root.addEventListener(EVENTS.COMPLETE_ALL_REQUEST, () => this.#completeVisible());
     root.addEventListener(EVENTS.CLEAR_REQUEST, () => this.#clear());
     root.addEventListener(EVENTS.FILTER_CHANGE, (e) => {
@@ -129,14 +139,19 @@ class TaskApp extends HTMLElement {
   /** Vuelve a pintar la lista, los contadores, el resumen y la barra de progreso. */
   #render() {
     const all = taskStore.getAll();
-    const visible = filterTasks(all, this.#filters);
+    const categories = taskStore.getCategories();
+    // setCategories puede cambiar el filtro (si se borró la categoría filtrada), por eso va antes de filtrar.
+    this.toolbar.setCategories(categories);
+    const visible = this.#withCategoryNames(filterTasks(all, this.#filters), categories);
     const stats = countStats(all);
 
     this.toolbar.updateStats(stats);
     this.list.update({ tasks: visible, total: all.length });
 
     const summary = this.shadowRoot.querySelector('.summary');
-    const isFiltered = this.#filters.query.trim() !== '' || this.#filters.status !== STATUS.ALL;
+    const isFiltered = this.#filters.query.trim() !== ''
+      || this.#filters.status !== STATUS.ALL
+      || this.#filters.category !== CATEGORY_FILTER.ALL;
     if (all.length === 0) {
       summary.textContent = '';
     } else if (isFiltered) {
@@ -149,6 +164,12 @@ class TaskApp extends HTMLElement {
     this.shadowRoot.getElementById('progress-value').textContent = `${percent}%`;
     this.shadowRoot.getElementById('progress-bar').style.width = `${percent}%`;
     this.shadowRoot.getElementById('progress-track').setAttribute('aria-valuenow', percent);
+  }
+
+  /** Agrega a cada tarea el nombre de su categoría, para que <task-item> lo muestre. */
+  #withCategoryNames(tasks, categories) {
+    const names = new Map(categories.map((category) => [category.id, category.name]));
+    return tasks.map((task) => ({ ...task, categoryName: names.get(task.categoryId) ?? null }));
   }
 
   /**
@@ -176,7 +197,7 @@ class TaskApp extends HTMLElement {
       this.toast.show('Las tareas importadas no se pueden editar, solo eliminar.', 'info');
       return;
     }
-    this.form.open(task);
+    this.form.open(task, taskStore.getCategories());
   }
 
   #save({ id, data }) {
@@ -219,9 +240,9 @@ class TaskApp extends HTMLElement {
     });
   }
 
-  #import(todos) {
+  #import({ todos, categoryId }) {
     this.importer.close(); // se cierra primero para que el aviso no quede tapado por el modal
-    const result = this.#run(() => taskStore.importTodos(todos));
+    const result = this.#run(() => taskStore.importTodos(todos, categoryId));
     this.toolbar.focusCreate(); // por si se abrió desde "Aún no tienes tareas", que ya no se ve
     if (!result) return; // falló: #run ya mostró el error
 
@@ -229,7 +250,56 @@ class TaskApp extends HTMLElement {
       ? plural(result.added, 'tarea importada', 'tareas importadas')
       : 'No se importó ninguna tarea nueva';
     if (result.skipped > 0) message += ` · ${plural(result.skipped, 'ya existía', 'ya existían')}`;
+    const category = categoryId ? taskStore.getCategoryById(categoryId) : null;
+    if (category && result.added > 0) message += ` en "${category.name}"`;
     this.toast.show(message, result.added > 0 ? 'success' : 'info');
+  }
+
+  // ----- Categorías -----
+
+  /** Crea (sin id) o renombra (con id) una categoría desde el gestor. */
+  #saveCategory({ id, name }) {
+    try {
+      if (id) taskStore.updateCategory(id, { name });
+      else taskStore.addCategory({ name });
+      this.categories.resetForm();
+      this.toast.show(id ? 'Categoría actualizada' : 'Categoría creada', 'success');
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        this.categories.showError(error.errors.name); // el gestor se queda abierto con el error
+      } else {
+        this.toast.show(error.message, 'error');
+        console.error(error);
+      }
+    }
+    this.#refreshCategories();
+  }
+
+  /** Pide confirmación y elimina la categoría. Sus tareas quedan "Sin categoría". */
+  #deleteCategory(id) {
+    const category = taskStore.getCategoryById(id);
+    if (!category) return;
+    const taskCount = taskStore.countByCategory().get(id) ?? 0;
+    const note = taskCount > 0
+      ? ` ${plural(taskCount, 'tarea quedará', 'tareas quedarán')} sin categoría (no se eliminan).`
+      : '';
+
+    this.confirm.ask({
+      title: '¿Eliminar esta categoría?',
+      message: `"${category.name}" se eliminará de forma permanente.${note}`,
+      confirmText: 'Eliminar',
+      tone: 'danger',
+      onConfirm: () => {
+        this.#run(() => taskStore.removeCategory(id), 'Categoría eliminada');
+        this.#refreshCategories();
+      },
+    });
+  }
+
+  /** Actualiza el gestor de categorías y la lista (nombres de las etiquetas y el filtro). */
+  #refreshCategories() {
+    this.categories.update(taskStore.getCategories(), taskStore.countByCategory());
+    this.#render();
   }
 
   /**

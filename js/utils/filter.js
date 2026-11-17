@@ -26,6 +26,19 @@ export function normalize(text) {
     .trim();
 }
 
+// Opciones especiales del filtro por categoría (las demás opciones son ids de categoría)
+export const CATEGORY_FILTER = Object.freeze({
+  ALL: 'all', //   todas las categorías
+  NONE: 'none', // solo las tareas sin categoría
+});
+
+// Dice si una tarea cumple el filtro de categoría elegido
+export function matchesCategory(task, category) {
+  if (category === CATEGORY_FILTER.ALL) return true;
+  if (category === CATEGORY_FILTER.NONE) return !task.categoryId;
+  return task.categoryId === category;
+}
+
 // Dice si una tarea cumple el filtro de estado elegido
 export function matchesStatus(task, status) {
   if (status === STATUS.COMPLETED) return task.completed;
@@ -47,10 +60,12 @@ function matchesQuery(task, query) {
   return query.startsWith('tsk') && normalize(task.id).startsWith(query);
 }
 
-// Devuelve solo las tareas que cumplen el filtro de estado y la búsqueda
-export function filterTasks(tasks, { status = STATUS.ALL, query = '' } = {}) {
+// Devuelve solo las tareas que cumplen el filtro de estado, el de categoría y la búsqueda
+export function filterTasks(tasks, { status = STATUS.ALL, query = '', category = CATEGORY_FILTER.ALL } = {}) {
   const q = normalize(query);
-  return tasks.filter((task) => matchesStatus(task, status) && matchesQuery(task, q));
+  return tasks.filter(
+    (task) => matchesStatus(task, status) && matchesCategory(task, category) && matchesQuery(task, q)
+  );
 }
 
 // Cuenta el total, las completadas y las pendientes (para los contadores y la barra de progreso)
