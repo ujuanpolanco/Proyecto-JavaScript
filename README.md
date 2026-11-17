@@ -147,10 +147,16 @@ Si ninguna tarea coincide, verás **"Sin resultados"** con un botón para **Limp
 ## 7. Contenido del proyecto
 
 ```
-ProyectoTareas/
+Proyecto-JavaScript/
 ├── index.html        Página principal
 ├── css/              Colores y estilos generales
-├── js/               Código de la aplicación (componentes, datos y conexión con la API)
+├── js/
+│   ├── main.js       Punto de entrada
+│   ├── components/   Componentes web (lista, formularios, importar, categorías…)
+│   ├── models/       Tarea y categoría: estructura y validaciones
+│   ├── store/        Store central (único módulo que cambia los datos)
+│   ├── services/     localStorage y conexión con la API
+│   └── utils/        Ayudantes: IDs, filtros, eventos, formato y DOM
 └── docs/
     ├── PLAN.md       Explicación del ejercicio y plan del proyecto
     └── wireframes/   Bocetos de las pantallas
